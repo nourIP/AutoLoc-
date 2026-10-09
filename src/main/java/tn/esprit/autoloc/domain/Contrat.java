@@ -42,4 +42,4 @@ public class Contrat {
     @OneToMany(mappedBy = "contrat", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<Paiement> paiements = new ArrayList<>();
-}git
+}
