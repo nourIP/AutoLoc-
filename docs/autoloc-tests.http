@@ -1,0 +1,260 @@
+### ===================================================================
+### AutoLoc - Tests API REST IntelliJ HTTP Client (Équivalent Postman)
+### Compatible directement dans IntelliJ IDEA Ultimate / Community
+### ===================================================================
+
+@baseUrl = http://localhost:8081
+
+### -------------------------------------------------------------------
+### 1. CONTRATS & CASCADE PAIEMENTS (Fil rouge TP5 Étapes 1 à 7)
+### -------------------------------------------------------------------
+
+### 1.1 Lister les contrats (Étape 2 - 200 OK)
+GET {{baseUrl}}/api/contrats
+Accept: application/json
+
+> {%
+    client.test("Statut 200 OK", function() {
+        client.assert(response.status === 200, "Le statut doit être 200");
+    });
+%}
+
+### 1.2 Consulter un contrat inexistant (Étape 3 - 404 Not Found)
+GET {{baseUrl}}/api/contrats/9999
+Accept: application/json
+
+> {%
+    client.test("Statut 404 Not Found", function() {
+        client.assert(response.status === 404, "Le statut doit être 404");
+    });
+%}
+
+### 1.3 Créer un contrat simple (Étape 4 - 201 Created)
+POST {{baseUrl}}/api/contrats
+Content-Type: application/json
+
+{
+  "dateSignature": "2026-11-02",
+  "montantTotal": 480.00,
+  "valide": true
+}
+
+> {%
+    client.test("Statut 201 Created", function() {
+        client.assert(response.status === 201, "Le statut doit être 201");
+        client.global.set("contratId", response.body.idContrat || response.body.id);
+    });
+%}
+
+### 1.4 Créer un contrat avec un identifiant imposé (Refusé 400 Bad Request)
+POST {{baseUrl}}/api/contrats
+Content-Type: application/json
+
+{
+  "id": 5,
+  "idContrat": 5,
+  "dateSignature": "2026-11-02",
+  "montantTotal": 480.00,
+  "valide": true
+}
+
+> {%
+    client.test("Statut 400 Bad Request", function() {
+        client.assert(response.status === 400, "Le statut doit être 400");
+    });
+%}
+
+### 1.5 Créer un contrat avec ses paiements imbriqués (Étape 5 - Cascade PERSIST)
+POST {{baseUrl}}/api/contrats
+Content-Type: application/json
+
+{
+  "dateSignature": "2026-11-02",
+  "montantTotal": 480.00,
+  "valide": true,
+  "paiements": [
+    {
+      "montant": 150.00,
+      "datePaiement": "2026-11-02",
+      "modePaiement": "CARTE_BANCAIRE"
+    },
+    {
+      "montant": 330.00,
+      "datePaiement": "2026-11-06",
+      "modePaiement": "VIREMENT"
+    }
+  ]
+}
+
+> {%
+    client.test("Statut 201 Created", function() {
+        client.assert(response.status === 201, "Le statut doit être 201");
+        client.global.set("contratCascadeId", response.body.idContrat || response.body.id);
+    });
+%}
+
+### 1.6 Consulter le contrat créé
+GET {{baseUrl}}/api/contrats/{{contratId}}
+Accept: application/json
+
+> {%
+    client.test("Statut 200 OK", function() {
+        client.assert(response.status === 200, "Le statut doit être 200");
+    });
+%}
+
+### 1.7 Modifier le contrat (Étape 6 - Montant 480 -> 520)
+PUT {{baseUrl}}/api/contrats/{{contratId}}
+Content-Type: application/json
+
+{
+  "dateSignature": "2026-11-02",
+  "montantTotal": 520.00,
+  "valide": true
+}
+
+> {%
+    client.test("Statut 200 OK et montant mis à jour", function() {
+        client.assert(response.status === 200, "Le statut doit être 200");
+        client.assert(response.body.montantTotal === 520.00, "Le montant doit être 520");
+    });
+%}
+
+### 1.8 Supprimer le contrat (Étape 7 - 204 No Content)
+DELETE {{baseUrl}}/api/contrats/{{contratId}}
+
+> {%
+    client.test("Statut 204 No Content", function() {
+        client.assert(response.status === 204, "Le statut doit être 204");
+    });
+%}
+
+### -------------------------------------------------------------------
+### 2. PAIEMENTS (Lecture seule - 405 Method Not Allowed)
+### -------------------------------------------------------------------
+
+### 2.1 Lister les paiements (Vérifier que les paiements en cascade existent)
+GET {{baseUrl}}/api/paiements
+Accept: application/json
+
+> {%
+    client.test("Statut 200 OK", function() {
+        client.assert(response.status === 200, "Le statut doit être 200");
+    });
+%}
+
+### 2.2 Créer un paiement en direct (Refusé 405 Method Not Allowed)
+POST {{baseUrl}}/api/paiements
+Content-Type: application/json
+
+{
+  "montant": 100.00,
+  "datePaiement": "2026-11-02",
+  "modePaiement": "ESPECES"
+}
+
+> {%
+    client.test("Statut 405 Method Not Allowed", function() {
+        client.assert(response.status === 405, "POST non autorisé sur Paiements");
+    });
+%}
+
+### -------------------------------------------------------------------
+### 3. VÉHICULES
+### -------------------------------------------------------------------
+
+### 3.1 Lister les véhicules
+GET {{baseUrl}}/api/vehicules
+Accept: application/json
+
+### 3.2 Créer un véhicule
+POST {{baseUrl}}/api/vehicules
+Content-Type: application/json
+
+{
+  "immatriculation": "240-TUNIS-7890",
+  "marque": "Volkswagen",
+  "modele": "Golf 8",
+  "annee": 2024,
+  "prixParJour": 120.00,
+  "statut": "DISPONIBLE",
+  "categorie": "BERLINE"
+}
+
+> {%
+    client.test("Statut 201", function() {
+        client.assert(response.status === 201);
+        client.global.set("vehiculeId", response.body.idVehicule || response.body.id);
+    });
+%}
+
+### 3.3 Créer un véhicule avec prix négatif (Refusé 400 Bad Request)
+POST {{baseUrl}}/api/vehicules
+Content-Type: application/json
+
+{
+  "immatriculation": "999-TUN-9999",
+  "marque": "Renault",
+  "modele": "Clio",
+  "prixParJour": -50.00
+}
+
+> {%
+    client.test("Statut 400 Bad Request", function() {
+        client.assert(response.status === 400);
+    });
+%}
+
+### -------------------------------------------------------------------
+### 4. AGENCES
+### -------------------------------------------------------------------
+
+### 4.1 Lister les agences
+GET {{baseUrl}}/api/agences
+Accept: application/json
+
+### 4.2 Créer une agence
+POST {{baseUrl}}/api/agences
+Content-Type: application/json
+
+{
+  "nom": "AutoLoc Tunis Centre",
+  "adresse": "Avenue Habib Bourguiba",
+  "ville": "Tunis",
+  "telephone": "+216 71 100 200"
+}
+
+> {%
+    client.test("Statut 201", function() {
+        client.assert(response.status === 201);
+        client.global.set("agenceId", response.body.idAgence || response.body.id);
+    });
+%}
+
+### -------------------------------------------------------------------
+### 5. CLIENTS
+### -------------------------------------------------------------------
+
+### 5.1 Lister les clients
+GET {{baseUrl}}/api/clients
+Accept: application/json
+
+### 5.2 Créer un client
+POST {{baseUrl}}/api/clients
+Content-Type: application/json
+
+{
+  "nom": "Ben Ali",
+  "prenom": "Mohamed",
+  "email": "mohamed.benali@esprit.tn",
+  "telephone": "+216 98 123 456",
+  "cin": "09876543",
+  "numeroPermis": "B-1234567"
+}
+
+> {%
+    client.test("Statut 201", function() {
+        client.assert(response.status === 201);
+        client.global.set("clientId", response.body.idClient || response.body.id);
+    });
+%}
