@@ -42,7 +42,7 @@ public class Reservation {
     private Client client;
 
     // 1 Reservation <-> 1 Contrat (côté inverse, la clé est dans Contrat)
-    @OneToOne(mappedBy = "reservation")
+    @OneToOne(mappedBy = "reservation", fetch = FetchType.LAZY)
     @JsonIgnore
     private Contrat contrat;
 }

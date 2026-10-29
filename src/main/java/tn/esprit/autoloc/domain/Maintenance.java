@@ -29,7 +29,7 @@ public class Maintenance {
     private String description;
 
     // * Maintenances -> 1 Vehicule (clé étrangère ici)
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.PERSIST)
     @JoinColumn(name = "id_vehicule")
     private Vehicule vehicule;
 }
